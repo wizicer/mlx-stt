@@ -19,15 +19,11 @@
 两个仓库推送并创建 GitHub Release 后：
 
 ```bash
-brew tap Icer/tap
+brew tap Icer/tap git@github.com:Icer/homebrew-tap.git
 brew install mlx-stt
 ```
 
-也可以直接：
-
-```bash
-brew install Icer/tap/mlx-stt
-```
+tap 完成后也可以直接执行 `brew install Icer/tap/mlx-stt`。私人仓库需要本机 SSH key 已获得访问权限。
 
 > 如果 GitHub owner 不是 `Icer`，请同步替换 README、Formula homepage 和 release URL 中的 owner。
 
