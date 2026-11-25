@@ -1,0 +1,57 @@
+[project]
+name = "mlx-stt"
+version = "0.1.0"
+description = "Local Chinese speech-to-text CLI for Apple Silicon powered by MLX and Qwen3-ASR"
+readme = "README.md"
+license = { file = "LICENSE" }
+requires-python = ">=3.12,<3.14"
+dependencies = [
+  "huggingface-hub==1.33.0",
+  "mlx==0.32.2",
+  "mlx-audio[stt]==0.5.6",
+  "numpy==2.5.3",
+  "transformers==5.17.0",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest==8.4.2",
+]
+build = [
+  "pyinstaller==6.22.3",
+  "pyinstaller-hooks-contrib==2026.10",
+]
+
+[project.scripts]
+mlx-stt = "mlx_stt.cli:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+
+[tool.uv]
+# Keep transitive dependencies on the versions validated with the original
+# MLX benchmark environment instead of silently floating to days-old releases.
+constraint-dependencies = [
+  "annotated-doc==0.0.5",
+  "anyio==4.15.1",
+  "certifi==2026.7.22",
+  "click==8.5.0",
+  "filelock==4.0.4",
+  "markdown-it-py==4.2.0",
+  "miniaudio==1.71",
+  "packaging==26.3",
+  "pycparser==3.0",
+  "pyyaml==6.0.3",
+  "regex==2026.9.10",
+  "tokenizers==0.23.2",
+  "typer==0.27.2",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/mlx_stt"]
+
+[tool.pytest.ini_options]
+addopts = "-q"
+testpaths = ["tests"]
