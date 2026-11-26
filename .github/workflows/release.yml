@@ -1,0 +1,79 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.ref_name }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Install Python
+        run: uv python install 3.12
+
+      - name: Install dependencies
+        run: uv sync --locked --extra build
+
+      - name: Validate tag matches project version
+        shell: bash
+        run: |
+          set -euo pipefail
+          PROJECT_VERSION=$(uv run python -c 'import tomllib; print(tomllib.load(open("pyproject.toml", "rb"))["project"]["version"])')
+          TAG_VERSION="${GITHUB_REF_NAME#v}"
+          if [ "$PROJECT_VERSION" != "$TAG_VERSION" ]; then
+            echo "Tag version '$TAG_VERSION' does not match project version '$PROJECT_VERSION'" >&2
+            exit 1
+          fi
+          if [ "$(uname -m)" != "arm64" ]; then
+            echo "Release builds must run on macOS arm64, got: $(uname -m)" >&2
+            exit 1
+          fi
+          echo "VERSION=$PROJECT_VERSION" >> "$GITHUB_ENV"
+
+      - name: Build release artifact
+        run: uv run python scripts/build_release.py
+
+      - name: Smoke-test release artifact
+        shell: bash
+        run: uv run python scripts/smoke_release.py "dist/mlx-stt-${VERSION}-macos-arm64.tar.gz" --skip-probe
+
+      - name: Verify checksum
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd dist
+          shasum -a 256 -c "mlx-stt-${VERSION}-macos-arm64.tar.gz.sha256"
+          cat "mlx-stt-${VERSION}-macos-arm64.tar.gz.sha256" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Publish GitHub Release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          FILES=(
+            "dist/mlx-stt-${VERSION}-macos-arm64.tar.gz"
+            "dist/mlx-stt-${VERSION}-macos-arm64.tar.gz.sha256"
+            "dist/build-info.json"
+          )
+          if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
+            gh release upload "$GITHUB_REF_NAME" "${FILES[@]}" --clobber
+          else
+            gh release create "$GITHUB_REF_NAME" "${FILES[@]}" \
+              --title "$GITHUB_REF_NAME" \
+              --notes "Automated mlx-stt ${VERSION} macOS arm64 release. Model weights are downloaded separately into the Hugging Face cache."
+          fi

@@ -19,13 +19,12 @@
 两个仓库推送并创建 GitHub Release 后：
 
 ```bash
-brew tap Icer/tap git@github.com:Icer/homebrew-tap.git
+brew tap wizicer/tap git@github.com:wizicer/homebrew-tap.git
 brew install mlx-stt
 ```
 
-tap 完成后也可以直接执行 `brew install Icer/tap/mlx-stt`。私人仓库需要本机 SSH key 已获得访问权限。
+tap 完成后也可以直接执行 `brew install wizicer/tap/mlx-stt`。使用 SSH 时需要本机 key 已添加到 GitHub 账户。
 
-> 如果 GitHub owner 不是 `Icer`，请同步替换 README、Formula homepage 和 release URL 中的 owner。
 
 ## 使用
 
@@ -82,7 +81,7 @@ brew install ffmpeg
 仓库推送后建议使用 SSH clone：
 
 ```bash
-git clone git@github.com:Icer/mlx-stt.git
+git clone git@github.com:wizicer/mlx-stt.git
 cd mlx-stt
 ```
 
@@ -147,11 +146,14 @@ uv run python scripts/smoke_release.py dist/mlx-stt-0.1.0-macos-arm64.tar.gz
 
 ## 发布流程
 
-1. 在 `mlx-stt` 仓库更新版本并打 tag，例如 `v0.1.0`。
-2. 构建 `mlx-stt-<version>-macos-arm64.tar.gz` 和 sha256。
-3. 在 GitHub Release 上传这两个文件以及 `build-info.json`。
-4. 在 `homebrew-tap` 仓库运行 `scripts/update_formula.py`，写入版本、URL 和 sha256。
-5. 提交 tap，执行 `brew install Icer/tap/mlx-stt` 与 `brew test mlx-stt` 验证。
+`.github/workflows/release.yml` 已配置自动 Release。推送与 `pyproject.toml` 版本一致的 tag 后，GitHub Actions 会在 macOS arm64 runner 上构建、smoke test、校验 sha256，并自动创建/更新 GitHub Release，上传 tar.gz、sha256 和 `build-info.json`：
+
+```bash
+git tag v0.1.0
+git push origin v0.1.0
+```
+
+tag 版本必须等于 `pyproject.toml` 中的 `project.version`，否则 workflow 会失败。当前自动 Release 只更新 `mlx-stt` 仓库；跨仓库自动改写 tap 需要额外 PAT/GitHub App secret，因此当前仍在 `homebrew-tap` 仓库运行 `scripts/update_formula.py` 写入新版本、URL 和 sha256，然后提交 tap 并执行 `brew install wizicer/tap/mlx-stt` 与 `brew test mlx-stt` 验证。
 
 ## 隐私与边界
 
