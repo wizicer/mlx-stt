@@ -18,15 +18,22 @@ jobs:
       - run: uv run mlx-stt --help
 
   build-smoke:
-    runs-on: macos-15
+    strategy:
+      matrix:
+        include:
+          - runs_on: macos-15
+            macos_target: "15"
+          - runs_on: macos-26
+            macos_target: "26"
+    runs-on: ${{ matrix.runs_on }}
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v5
       - run: uv python install 3.12
       - run: uv sync --locked --extra build
-      - run: uv run python scripts/build_release.py
+      - run: uv run python scripts/build_release.py --macos-target ${{ matrix.macos_target }}
       - name: Smoke-test release artifact
         shell: bash
         run: |
           VERSION=$(uv run python -c 'import tomllib; print(tomllib.load(open("pyproject.toml", "rb"))["project"]["version"])')
-          uv run python scripts/smoke_release.py "dist/mlx-stt-${VERSION}-macos-arm64.tar.gz" --skip-probe
+          uv run python scripts/smoke_release.py "dist/mlx-stt-${VERSION}-macos${{ matrix.macos_target }}-arm64.tar.gz" --skip-probe

@@ -20,7 +20,7 @@
 ## 环境要求
 
 - 搭载 Apple Silicon 的 Mac
-- macOS arm64
+- macOS 15 或更高版本（arm64）
 - 默认模型首次下载约 3.75 GB，请预留至少 4 GB 磁盘空间
 - 可选：安装 `ffmpeg` 以支持 MP3、M4A 等非 WAV 输入
 
@@ -161,9 +161,12 @@ uv run pytest
 
 ```bash
 uv sync --locked --extra build
-uv run python scripts/build_release.py
-uv run python scripts/smoke_release.py dist/mlx-stt-0.1.0-macos-arm64.tar.gz --skip-probe
+uv run python scripts/build_release.py --macos-target 15
+uv run python scripts/smoke_release.py dist/mlx-stt-0.1.1-macos15-arm64.tar.gz --skip-probe
 ```
+
+在 macOS 26 构建机上应使用 `--macos-target 26`。MLX Metal wheel 与 macOS target
+必须匹配，因此需要在对应版本的 macOS runner 上分别构建 artifact。
 
 推送与 `pyproject.toml` 版本一致的 `v*` tag 会触发 GitHub Actions 自动构建、冒烟验证并发布 Release。
 
