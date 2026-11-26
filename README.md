@@ -1,163 +1,173 @@
 # mlx-stt
 
-`mlx-stt` 是一个面向 macOS Apple Silicon 的本地中文语音转文字命令行工具。它使用 MLX 与 `mlx-audio` 运行 Qwen3-ASR，默认再使用 Qwen3 ForcedAligner 生成字级时间戳。音频只在本地处理；网络访问只发生在显式下载模型权重时。
+在 Apple Silicon Mac 上本地运行的中文语音转文字工具，输出文本和字级时间戳。
+
+[![CI](https://github.com/wizicer/mlx-stt/actions/workflows/ci.yml/badge.svg)](https://github.com/wizicer/mlx-stt/actions/workflows/ci.yml)
+[![Release](https://img.shields.io/github/v/release/wizicer/mlx-stt)](https://github.com/wizicer/mlx-stt/releases)
+[![Platform](https://img.shields.io/badge/platform-macOS%20arm64-black)](#环境要求)
+[![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
+
+`mlx-stt` 基于 MLX、mlx-audio、Qwen3-ASR 和 Qwen3-ForcedAligner。音频只在你的 Mac 上处理，不会上传。
 
 ## 功能
 
-- `mlx-stt transcribe input.wav -o result.json` 输出文本、分段和字级时间戳。
-- `--no-align` 跳过 forced aligner，减少首次下载体积和运行耗时。
-- `--help` / `--version` 不导入 MLX，启动快。
-- `probe` 只检查 MLX 与 Metal，不加载模型权重。
-- 模型不打进软件包，复用 Hugging Face 缓存或 `MLX_STT_MODEL_DIR`。
-- 16 kHz mono PCM WAV 直接使用；其他输入在检测到 `ffmpeg` 时自动转换。
-- PyInstaller onedir release，可通过私人 Homebrew tap 安装。
+- 中文语音转文字，输出结构化 JSON
+- 可生成逐字开始/结束时间，适合字幕、剪辑和检索
+- 通过 Homebrew 安装，不污染系统 Python 环境
+- 模型只需下载一次，升级软件不会重复下载
+- 非 WAV 音频可借助 `ffmpeg` 自动转换
 
-第一版只支持 macOS arm64，不包含 Apple 公证。模型下载体积：默认 ASR 约 2.47 GB，默认 forced aligner 约 1.28 GB。
+## 环境要求
 
-## Homebrew 安装（发布后）
+- 搭载 Apple Silicon 的 Mac
+- macOS arm64
+- 默认模型首次下载约 3.75 GB，请预留至少 4 GB 磁盘空间
+- 可选：安装 `ffmpeg` 以支持 MP3、M4A 等非 WAV 输入
 
-两个仓库推送并创建 GitHub Release 后：
+## 安装
 
 ```bash
 brew tap wizicer/tap git@github.com:wizicer/homebrew-tap.git
-brew install mlx-stt
+brew install wizicer/tap/mlx-stt
 ```
 
-tap 完成后也可以直接执行 `brew install wizicer/tap/mlx-stt`。使用 SSH 时需要本机 key 已添加到 GitHub 账户。
-
-
-## 使用
+确认安装：
 
 ```bash
 mlx-stt --version
 mlx-stt probe
-mlx-stt transcribe input.wav -o result.json
-mlx-stt transcribe input.wav -o result.json --no-align
-mlx-stt transcribe input.wav --language Chinese -o result.json
-mlx-stt models list
-mlx-stt models install qwen3-asr-1.7b-8bit
-mlx-stt models install qwen3-forced-aligner-0.6b-8bit
-mlx-stt models install default
 ```
 
-输出 JSON 包含：
+## 快速开始
 
-- `text`：完整转写文本；
-- `segments`：分段文本、起止时间和可选 `tokens` 字级时间戳；
-- `duration_seconds` / `elapsed_seconds`；
-- `metadata`：模型、对齐、chunk 数和输入是否经过 ffmpeg 转换。
+```bash
+mlx-stt transcribe input.wav -o result.json
+```
 
-## 模型缓存与镜像
+首次运行会自动下载默认模型；下载完成后，后续转写不需要重复下载。
 
-模型路径解析顺序：
+如果只想得到文本和分段、不需要逐字时间戳：
 
-1. `--model-path` / `--aligner-path` 显式目录；
-2. `MLX_STT_MODEL_DIR`；
-3. `HF_HUB_CACHE` / `HF_HOME` / 标准 Hugging Face cache。
+```bash
+mlx-stt transcribe input.wav -o result.json --no-align
+```
 
-`MLX_STT_MODEL_DIR` 是缓存根目录，既支持 Hugging Face 的 `models--org--name/snapshots/...` 布局，也支持直接包含 `Qwen3-ASR-1.7B-8bit/` 这类模型目录。模型不会复制到 Homebrew 安装目录，卸载或升级 brew 包不会删除模型。
+`--no-align` 会跳过时间戳模型，下载体积更小，通常也更快。
 
-在中国网络环境建议使用 Hugging Face mirror：
+MP3、M4A、视频音轨等其他输入可以先安装 `ffmpeg`：
+
+```bash
+brew install ffmpeg
+mlx-stt transcribe input.mp3 -o result.json
+```
+
+## 输出
+
+输出文件包含完整文本、分段和可选逐字时间戳。结构示例（节选）：
+
+```json
+{
+  "text": "完整转写文本",
+  "duration_seconds": 12.0,
+  "segments": [
+    {
+      "text": "分段文本",
+      "start": 0.0,
+      "end": 3.2,
+      "tokens": [
+        {
+          "text": "分",
+          "start": 0.0,
+          "end": 0.2
+        }
+      ]
+    }
+  ]
+```
+
+也可以直接输出到终端：
+
+```bash
+mlx-stt transcribe input.wav -o -
+```
+
+## 常用命令
+
+```bash
+# 查看模型缓存状态
+mlx-stt models list
+
+# 提前下载默认模型
+mlx-stt models install default
+
+# 使用较小的 0.6B 识别模型
+mlx-stt transcribe input.wav --model qwen3-asr-0.6b-8bit -o result.json
+
+# 查看运行进度
+mlx-stt transcribe input.wav -o result.json --verbose
+```
+
+## 模型下载加速
+
+如果首次下载模型较慢，可以在下载前启用镜像：
 
 ```bash
 export HF_ENDPOINT=https://hf-mirror.com
 mlx-stt models install default
 ```
 
-`huggingface_hub` 会读取 `HF_ENDPOINT`。不要把 token 写入仓库或 shell 历史；如需私有模型，请使用本机安全的 Hugging Face 登录状态。
+## 隐私
 
-## 音频输入
+- 音频不会上传，转写和时间戳对齐都在本地完成
+- 软件没有遥测或云端转写服务
+- 网络访问只用于下载模型权重
+- `brew uninstall` 不会删除已下载的模型缓存
 
-首选输入是 16 kHz mono PCM WAV，它会被直接读取。其他 WAV 或非 WAV 输入会调用 PATH 中的 `ffmpeg` 转成临时 16 kHz mono PCM WAV：
+<details>
+<summary>高级：自定义模型缓存位置</summary>
+
+默认情况下，模型会放在 Hugging Face 共享缓存中。也可以指定独立缓存目录：
 
 ```bash
-brew install ffmpeg
+export MLX_STT_MODEL_DIR=/path/to/model-cache
+mlx-stt models install default
 ```
 
-找不到 `ffmpeg` 时，CLI 会给出明确错误，不会静默失败或上传音频。
+已有本地模型目录时，可以直接指定：
 
-## 本地开发
+```bash
+mlx-stt transcribe input.wav \
+  --model-path /path/to/Qwen3-ASR-1.7B-8bit \
+  --aligner-path /path/to/Qwen3-ForcedAligner-0.6B-8bit \
+  -o result.json
+```
 
-仓库推送后建议使用 SSH clone：
+</details>
+
+<details>
+<summary>开发与发布</summary>
+
+开发环境：
 
 ```bash
 git clone git@github.com:wizicer/mlx-stt.git
 cd mlx-stt
-```
-
-安装依赖并运行测试：
-
-```bash
-uv python install 3.12
-uv sync --extra dev
-uv run mlx-stt --help
-uv run mlx-stt --version
+uv sync --locked --extra dev
 uv run pytest
 ```
 
-单元测试使用 fake ASR/aligner，不下载数 GB 模型，也不需要 GPU。真实模型 smoke test：
+构建 release artifact：
 
 ```bash
-export HF_ENDPOINT=https://hf-mirror.com
-uv run mlx-stt probe
-uv run mlx-stt models install default
-uv run mlx-stt transcribe /path/to/input.wav -o /tmp/mlx-stt-result.json
-```
-
-## 构建 release artifact
-
-安装构建依赖：
-
-```bash
-uv sync --extra dev --extra build
-```
-
-一键构建 PyInstaller onedir tar.gz：
-
-```bash
+uv sync --locked --extra build
 uv run python scripts/build_release.py
+uv run python scripts/smoke_release.py dist/mlx-stt-0.1.0-macos-arm64.tar.gz --skip-probe
 ```
 
-输出类似：
+推送与 `pyproject.toml` 版本一致的 `v*` tag 会触发 GitHub Actions 自动构建、冒烟验证并发布 Release。
 
-```text
-dist/mlx-stt-0.1.0-macos-arm64.tar.gz
-dist/mlx-stt-0.1.0-macos-arm64.tar.gz.sha256
-dist/build-info.json
-```
+</details>
 
-在项目外路径解包并做 smoke test：
+## License
 
-```bash
-uv run python scripts/smoke_release.py dist/mlx-stt-0.1.0-macos-arm64.tar.gz
-```
-
-可以加 `--audio /path/to/input.wav` 做真实转写；默认会先执行 `--version`、`--help` 和 `probe`。onedir 目录中的 `mlx-stt` 与 `_internal/` 必须保持相邻，不能只 symlink 或单独复制主程序。
-
-## 0.1.0 本机验证记录
-
-以下结果来自 Apple M4 / 16 GB 的 macOS arm64 机器，用于确认 artifact 和安装路径可运行；不是跨机器性能承诺。
-
-- `uv run pytest`：14 个测试通过。
-- 本机预发布 artifact：`mlx-stt-0.1.0-macos-arm64.tar.gz` 约 97 MB，解包后约 268 MB；本地构建 sha256 为 `f64fd94c8a25f9bb3703b4ed99d3e8bc89ac5bd999fa364a5043d25f88d18d4c`。GitHub Actions 重建并发布的 v0.1.0 artifact sha256 为 `61e9e66fb6218ca60710b981a0c160665c91cc953deb9642ed5ce42b03fcd63b`；Homebrew Formula 以 release artifact 的 hash 为准。
-- `scripts/smoke_release.py` 的 `--version`、`--help` 和 `probe` 检查通过。
-- 使用 276.874 秒中文 WAV 加 `--audio` 完成 frozen 转写 smoke：791 字符、3 个分段。该 M4/16 GB 环境耗时约 90 秒；早期报告中 13–15 秒来自 Apple M5 / 24 GB，不能直接比较。少量标点与字级时间戳差异也可由不同 GPU/硬件数值行为解释，代码路径与原 benchmark 的 quiet-point chunking 实现一致。
-- sibling `homebrew-tap` 的本地临时 tap 验证通过：`brew install`、`brew test` 和 `mlx-stt --version` 均成功；卸载不会删除 Hugging Face 模型缓存。
-
-## 发布流程
-
-`.github/workflows/release.yml` 已配置自动 Release。推送与 `pyproject.toml` 版本一致的 tag 后，GitHub Actions 会在 macOS arm64 runner 上构建、smoke test、校验 sha256，并自动创建/更新 GitHub Release，上传 tar.gz、sha256 和 `build-info.json`：
-
-```bash
-git tag v0.1.0
-git push origin v0.1.0
-```
-
-tag 版本必须等于 `pyproject.toml` 中的 `project.version`，否则 workflow 会失败。当前自动 Release 只更新 `mlx-stt` 仓库；跨仓库自动改写 tap 需要额外 PAT/GitHub App secret，因此当前仍在 `homebrew-tap` 仓库运行 `scripts/update_formula.py` 写入新版本、URL 和 sha256，然后提交 tap 并执行 `brew install wizicer/tap/mlx-stt` 与 `brew test mlx-stt` 验证。
-
-## 隐私与边界
-
-- 程序不包含上传音频、远程音频 URL 或遥测逻辑。
-- 只有模型下载会访问 Hugging Face / `HF_ENDPOINT` 镜像。
-- 第一版不承诺 Intel Mac、Linux、Windows 或 Apple 公证。
-- 私人 tap 是二进制分发机制；若未来要进入 homebrew-core，需要重新评估源码构建和审核要求。
+[MIT](LICENSE)
