@@ -27,9 +27,10 @@
 ## 安装
 
 ```bash
-brew tap wizicer/tap git@github.com:wizicer/homebrew-tap.git
 brew install wizicer/tap/mlx-stt
 ```
+
+首次安装时 Homebrew 会自动添加 `wizicer/tap`。
 
 确认安装：
 
