@@ -139,7 +139,7 @@ uv run python scripts/smoke_release.py dist/mlx-stt-0.1.0-macos-arm64.tar.gz
 以下结果来自 Apple M4 / 16 GB 的 macOS arm64 机器，用于确认 artifact 和安装路径可运行；不是跨机器性能承诺。
 
 - `uv run pytest`：14 个测试通过。
-- artifact：`mlx-stt-0.1.0-macos-arm64.tar.gz` 约 97 MB，解包后约 268 MB；sha256 为 `f64fd94c8a25f9bb3703b4ed99d3e8bc89ac5bd999fa364a5043d25f88d18d4c`。
+- 本机预发布 artifact：`mlx-stt-0.1.0-macos-arm64.tar.gz` 约 97 MB，解包后约 268 MB；本地构建 sha256 为 `f64fd94c8a25f9bb3703b4ed99d3e8bc89ac5bd999fa364a5043d25f88d18d4c`。GitHub Actions 重建并发布的 v0.1.0 artifact sha256 为 `61e9e66fb6218ca60710b981a0c160665c91cc953deb9642ed5ce42b03fcd63b`；Homebrew Formula 以 release artifact 的 hash 为准。
 - `scripts/smoke_release.py` 的 `--version`、`--help` 和 `probe` 检查通过。
 - 使用 276.874 秒中文 WAV 加 `--audio` 完成 frozen 转写 smoke：791 字符、3 个分段。该 M4/16 GB 环境耗时约 90 秒；早期报告中 13–15 秒来自 Apple M5 / 24 GB，不能直接比较。少量标点与字级时间戳差异也可由不同 GPU/硬件数值行为解释，代码路径与原 benchmark 的 quiet-point chunking 实现一致。
 - sibling `homebrew-tap` 的本地临时 tap 验证通过：`brew install`、`brew test` 和 `mlx-stt --version` 均成功；卸载不会删除 Hugging Face 模型缓存。
