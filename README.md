@@ -9,6 +9,32 @@
 
 `mlx-stt` 基于 MLX、mlx-audio、Qwen3-ASR 和 Qwen3-ForcedAligner。音频只在你的 Mac 上处理，不会上传。
 
+## 为什么是 mlx-stt
+
+这个项目源于一次实际选型。最初我希望直接使用一个现成库，因为语音转文字看起来已经是非常成熟的能力；但在寻找和实测过程中发现，现有方案很难同时满足速度、准确率、体积和逐字时间戳的需求。
+
+我一开始更倾向于使用轻量小巧的 Rust 实现，但现有 Rust 方案在完整功能下的性能受到明显制约。最终选择基于 MLX 的方案：体积适中，在本次对比测试中速度最快，识别准确率也处于第一梯队，并能稳定输出逐字时间戳。
+
+## 性能对比
+
+在 Apple M5 / 24 GB 上，使用同一段 4 分 37 秒中文语音测试，模型已预先下载：
+
+| 方案 | 仅转写 | 转写＋逐字时间戳 | CER |
+|---|---:|---:|---:|
+| **[mlx-stt](https://github.com/wizicer/mlx-stt)** | **16.58 秒** | **20.39 秒** | **0.84%** |
+| [OneAsr](https://github.com/eclipse005/OneAsr) | — | 52.48 秒 | 1.40% |
+| [QwenASR](https://github.com/huanglizhuo/QwenASR) Rust CPU | 32.17 秒 | 54.85 秒 | 0.98% |
+| [qwen3-asr-wgpu](https://github.com/eclipse005/qwen3-asr-wgpu) | — | 55.75 秒 | 0.84% |
+| [OpenASR](https://github.com/QuintinShaw/openasr) 1.7B q8 | — | 162.32 秒* | 12.50% |
+| [second-state qwen3_asr_rs](https://github.com/second-state/qwen3_asr_rs) | 138.03 秒 | — | 1.40% |
+| [qwen3-asr-rs](https://github.com/alan890104/qwen3-asr-rs) Candle | 212.68 秒 | — | 0.84% |
+
+<small>
+测试音频长 276.874 秒；时间为串行测试中位数，不包含首次模型下载。
+“—”表示该方案未测或不支持。OpenASR 输出为 segment 级时间，不是严格逐字时间戳。
+完整测试条件见 <a href="benchmark.md">benchmark.md</a>。
+</small>
+
 ## 功能
 
 - 中文语音转文字，输出结构化 JSON
