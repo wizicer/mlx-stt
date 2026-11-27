@@ -15,6 +15,7 @@ from starlette.requests import Request
 from starlette.responses import JSONResponse, PlainTextResponse, Response
 from starlette.routing import Route
 
+from .audio import ffmpeg_executable
 from .errors import MlxSttError
 from .models import ASR_MODELS
 from .transcribe import TranscriptionEngine
@@ -281,6 +282,7 @@ def create_app(
                 "status": "ok",
                 "model": engine.asr_spec.alias,
                 "alignment": engine.aligner is not None,
+                "ffmpeg_available": ffmpeg_executable() is not None,
             }
         )
 

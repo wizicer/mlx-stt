@@ -71,3 +71,20 @@ def test_serve_uses_environment_api_key(monkeypatch):
     assert captured["engine"]["model_alias"] == "qwen3-asr-0.6b-8bit"
     assert captured["serve"]["port"] == 8123
     assert captured["serve"]["api_key"] == "secret"
+
+
+def test_serve_warns_at_startup_when_ffmpeg_is_missing(monkeypatch, capsys):
+    import mlx_stt.audio
+    import mlx_stt.server
+    import mlx_stt.transcribe
+
+    class FakeEngine:
+        def __init__(self, **_kwargs):
+            pass
+
+    monkeypatch.setattr(mlx_stt.audio, "ffmpeg_executable", lambda: None)
+    monkeypatch.setattr(mlx_stt.transcribe, "TranscriptionEngine", FakeEngine)
+    monkeypatch.setattr(mlx_stt.server, "serve", lambda *_args, **_kwargs: None)
+
+    assert main(["serve"]) == 0
+    assert "ffmpeg was not found" in capsys.readouterr().err

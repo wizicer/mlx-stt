@@ -151,8 +151,16 @@ def command_serve(args: argparse.Namespace) -> int:
     if not 1 <= args.port <= 65535:
         raise MlxSttError("--port must be between 1 and 65535")
 
+    from .audio import ffmpeg_executable
     from .server import serve
     from .transcribe import TranscriptionEngine
+
+    if ffmpeg_executable() is None:
+        print(
+            "mlx-stt: warning: ffmpeg was not found; only 16 kHz mono PCM WAV input can be processed. "
+            "Install ffmpeg with `brew install ffmpeg` to support MP3, M4A and other audio formats.",
+            file=sys.stderr,
+        )
 
     engine = TranscriptionEngine(
         model_alias=args.model,

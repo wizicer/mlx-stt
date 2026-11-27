@@ -97,7 +97,9 @@ mlx-stt transcribe input.mp3 -o result.json
 mlx-stt serve
 ```
 
-服务默认监听 `127.0.0.1:8080`。最简单的请求不需要传模型名，会使用服务启动时的默认模型：
+服务默认监听 `127.0.0.1:8080`。启动时如果未检测到 `ffmpeg`，会立即在终端输出警告；此时只能直接处理 16 kHz mono PCM WAV 输入。`/health` 中的 `ffmpeg_available` 也会显示检测结果。
+
+最简单的请求不需要传模型名，会使用服务启动时的默认模型：
 
 ```bash
 curl http://127.0.0.1:8080/v1/audio/transcriptions \

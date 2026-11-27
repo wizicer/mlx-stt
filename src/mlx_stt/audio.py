@@ -64,6 +64,10 @@ def duration_seconds(path: Path) -> float:
     return info.duration_seconds
 
 
+def ffmpeg_executable() -> str | None:
+    return shutil.which("ffmpeg")
+
+
 def prepare_audio(source: Path, work_directory: Path) -> PreparedAudio:
     source = Path(source).expanduser()
     if not source.is_file():
@@ -73,7 +77,7 @@ def prepare_audio(source: Path, work_directory: Path) -> PreparedAudio:
     if info is not None and info.is_target_pcm:
         return PreparedAudio(path=source, converted=False, ffmpeg_path=None)
 
-    ffmpeg = shutil.which("ffmpeg")
+    ffmpeg = ffmpeg_executable()
     if ffmpeg is None:
         detail = (
             "it is not a readable WAV file"

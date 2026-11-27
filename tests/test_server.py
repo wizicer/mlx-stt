@@ -60,6 +60,16 @@ def test_health_and_models():
     assert models.json()["data"][0]["id"] == "qwen3-asr-1.7b-8bit"
 
 
+def test_health_reports_ffmpeg_availability(monkeypatch):
+    monkeypatch.setattr("mlx_stt.server.ffmpeg_executable", lambda: None)
+    client, _engine = client_and_engine()
+
+    response = client.get("/health")
+
+    assert response.status_code == 200
+    assert response.json()["ffmpeg_available"] is False
+
+
 def test_transcription_uses_default_model_when_model_field_is_omitted(tmp_path, write_pcm_wav):
     source = write_pcm_wav(tmp_path / "input.wav", seconds=0.1)
     client, engine = client_and_engine()
