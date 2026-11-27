@@ -233,7 +233,7 @@ uv run pytest
 ```bash
 uv sync --locked --extra build
 uv run python scripts/build_release.py --macos-target 15
-uv run python scripts/smoke_release.py dist/mlx-stt-0.1.1-macos15-arm64.tar.gz --skip-probe
+uv run python scripts/smoke_release.py dist/mlx-stt-0.2.0-macos15-arm64.tar.gz --skip-probe
 ```
 
 在 macOS 26 构建机上应使用 `--macos-target 26`。MLX Metal wheel 与 macOS target

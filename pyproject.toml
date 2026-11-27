@@ -1,6 +1,6 @@
 [project]
 name = "mlx-stt"
-version = "0.1.1"
+version = "0.2.0"
 description = "Local Chinese speech-to-text CLI for Apple Silicon powered by MLX and Qwen3-ASR"
 readme = "README.md"
 license = { file = "LICENSE" }
