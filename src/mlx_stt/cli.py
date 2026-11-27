@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import platform
 import sys
 from importlib.metadata import PackageNotFoundError
@@ -43,6 +44,23 @@ def build_parser() -> argparse.ArgumentParser:
     transcribe.add_argument("--chunk-seconds", type=int, default=120, help=argparse.SUPPRESS)
     transcribe.add_argument("--verbose", action="store_true", help="show mlx-audio progress while transcribing")
     transcribe.set_defaults(handler=command_transcribe)
+
+    serve = subparsers.add_parser("serve", help="run an OpenAI-compatible local transcription API")
+    serve.add_argument("--host", default="127.0.0.1", help="host interface to bind (default: 127.0.0.1)")
+    serve.add_argument("--port", type=int, default=8080, help="port to bind (default: 8080)")
+    serve.add_argument("--language", default="Chinese", help="default language passed to Qwen3-ASR")
+    serve.add_argument("--model", choices=sorted(ASR_MODELS), default=DEFAULT_ASR_ALIAS, help="ASR model alias")
+    serve.add_argument("--model-path", type=Path, help="local ASR model directory")
+    serve.add_argument("--aligner-path", type=Path, help="local forced-aligner model directory")
+    serve.add_argument("--api-key", help="require this Bearer token; defaults to MLX_STT_API_KEY when set")
+    serve.add_argument(
+        "--log-level",
+        default="info",
+        choices=("critical", "error", "warning", "info", "debug", "trace"),
+        help="uvicorn log level (default: info)",
+    )
+    serve.add_argument("--chunk-seconds", type=int, default=120, help=argparse.SUPPRESS)
+    serve.set_defaults(handler=command_serve)
 
     models = subparsers.add_parser("models", help="inspect or download model weights")
     model_subparsers = models.add_subparsers(dest="models_command", required=True)
@@ -126,6 +144,30 @@ def command_models_install(args: argparse.Namespace) -> int:
         print(f"Ensuring {spec.repo_id} ({spec.approximate_download}) in {root}", file=sys.stderr)
         path = resolve_model(spec, cache_root=root, download=True)
         print(f"{spec.alias}: {path}")
+    return 0
+
+
+def command_serve(args: argparse.Namespace) -> int:
+    if not 1 <= args.port <= 65535:
+        raise MlxSttError("--port must be between 1 and 65535")
+
+    from .server import serve
+    from .transcribe import TranscriptionEngine
+
+    engine = TranscriptionEngine(
+        model_alias=args.model,
+        model_path=args.model_path,
+        aligner_path=args.aligner_path,
+        language=args.language,
+        chunk_seconds=args.chunk_seconds,
+    )
+    serve(
+        engine,
+        host=args.host,
+        port=args.port,
+        api_key=args.api_key or os.environ.get("MLX_STT_API_KEY") or None,
+        log_level=args.log_level,
+    )
     return 0
 
 

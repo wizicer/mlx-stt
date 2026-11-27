@@ -43,8 +43,11 @@ def smoke(archive: Path, *, skip_probe: bool, audio: Path | None, no_align: bool
         print(f"version: {version}")
 
         help_output = run([str(executable), "--help"]).stdout
-        if "transcribe" not in help_output:
-            raise RuntimeError("--help output does not contain the transcribe command")
+        if "transcribe" not in help_output or "serve" not in help_output:
+            raise RuntimeError("--help output does not contain the transcribe and serve commands")
+        serve_help = run([str(executable), "serve", "--help"]).stdout
+        if "--port" not in serve_help or "--api-key" not in serve_help:
+            raise RuntimeError("serve --help output is incomplete")
         print("help: ok")
 
         if not skip_probe:

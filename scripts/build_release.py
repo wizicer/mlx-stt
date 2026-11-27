@@ -52,6 +52,9 @@ DEPENDENCIES = [
     "transformers",
     "huggingface-hub",
     "numpy",
+    "python-multipart",
+    "starlette",
+    "uvicorn",
     "PyInstaller",
     "pyinstaller-hooks-contrib",
 ]

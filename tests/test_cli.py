@@ -35,7 +35,9 @@ def test_help_does_not_import_mlx(capsys):
         main(["--help"])
 
     assert exc_info.value.code == 0
-    assert "transcribe" in capsys.readouterr().out
+    help_output = capsys.readouterr().out
+    assert "transcribe" in help_output
+    assert "serve" in help_output
     assert newly_imported_mlx_modules(before) == []
 
 
@@ -45,3 +47,27 @@ def test_package_version_matches_pyproject():
     pyproject = tomllib.loads((Path(__file__).resolve().parents[1] / "pyproject.toml").read_text(encoding="utf-8"))
 
     assert __version__ == pyproject["project"]["version"]
+
+
+def test_serve_uses_environment_api_key(monkeypatch):
+    import mlx_stt.server
+    import mlx_stt.transcribe
+
+    captured = {}
+
+    class FakeEngine:
+        def __init__(self, **kwargs):
+            captured["engine"] = kwargs
+
+    def fake_serve(engine, **kwargs):
+        captured["engine_instance"] = engine
+        captured["serve"] = kwargs
+
+    monkeypatch.setattr(mlx_stt.transcribe, "TranscriptionEngine", FakeEngine)
+    monkeypatch.setattr(mlx_stt.server, "serve", fake_serve)
+    monkeypatch.setenv("MLX_STT_API_KEY", "secret")
+
+    assert main(["serve", "--port", "8123", "--model", "qwen3-asr-0.6b-8bit"]) == 0
+    assert captured["engine"]["model_alias"] == "qwen3-asr-0.6b-8bit"
+    assert captured["serve"]["port"] == 8123
+    assert captured["serve"]["api_key"] == "secret"

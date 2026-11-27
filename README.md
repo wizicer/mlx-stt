@@ -40,6 +40,7 @@
 - 中文语音转文字，输出结构化 JSON
 - 可生成逐字开始/结束时间，适合字幕、剪辑和检索
 - 通过 Homebrew 安装，不污染系统 Python 环境
+- 可提供 OpenAI 兼容的本地 HTTP API
 - 模型只需下载一次，升级软件不会重复下载
 - 非 WAV 音频可借助 `ffmpeg` 自动转换
 
@@ -87,6 +88,48 @@ MP3、M4A、视频音轨等其他输入可以先安装 `ffmpeg`：
 brew install ffmpeg
 mlx-stt transcribe input.mp3 -o result.json
 ```
+
+## 本地 API
+
+启动 OpenAI 兼容的本地转写服务：
+
+```bash
+mlx-stt serve
+```
+
+服务默认监听 `127.0.0.1:8080`。最简单的请求不需要传模型名，会使用服务启动时的默认模型：
+
+```bash
+curl http://127.0.0.1:8080/v1/audio/transcriptions \
+  -F file=@audio.wav
+```
+
+如果需要精确到 token/字级的时间线，不需要额外 endpoint，在同一个转写 endpoint 上增加 OpenAI 标准的 `timestamp_granularities[]=word` 参数即可：
+
+```bash
+curl http://127.0.0.1:8080/v1/audio/transcriptions \
+  -F file=@audio.wav \
+  -F response_format=verbose_json \
+  -F 'timestamp_granularities[]=word'
+```
+
+OpenAI SDK 的方法签名仍要求提供 `model` 参数；传 `default` 即可使用服务端默认模型：
+
+```python
+from openai import OpenAI
+
+client = OpenAI(base_url="http://127.0.0.1:8080/v1", api_key="local")
+result = client.audio.transcriptions.create(
+    file=open("audio.wav", "rb"),
+    model="default",
+    response_format="verbose_json",
+    timestamp_granularities=["word"],
+)
+print(result.text)
+print(result.words)
+```
+
+转写请求默认串行处理，避免多个模型推理任务同时占用过多内存。可以用 `--api-key` 或 `MLX_STT_API_KEY` 启用 Bearer token 校验。当前支持 `json`、`text` 和 `verbose_json` 响应；暂不支持 streaming、SRT/VTT 或说话人分离。
 
 ## 输出
 
